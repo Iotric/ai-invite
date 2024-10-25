@@ -1,0 +1,4 @@
+imageio_ffmpeg
+librosa
+torch
+transformers
