@@ -121,12 +121,12 @@ def process_transcription(transcription: str, input_dict: Dict[str, List[str]], 
     return initial_results
 
 # example usage
-if __name__ == "__main__":
-    transcription = "hey nick, how are you doing brother ?"
-    input_dict = {
-        "nick": ["himanshu", "nitish", "alex", "monica", "camila"],
-        "brother": ["sister", "mother", "father"]
-    }
+# if __name__ == "__main__":
+#     transcription = "hey nick, how are you doing brother ?"
+#     input_dict = {
+#         "nick": ["dana forba", "ben", "alex", "monica", "camila"],
+#         "brother": ["sister", "mother", "father"]
+#     }
 
-    result = process_transcription(transcription, input_dict)
-    print(result)
+#     result = process_transcription(transcription, input_dict)
+#     print(result)

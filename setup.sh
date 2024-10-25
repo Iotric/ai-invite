@@ -31,7 +31,7 @@ cd code/audio_cloner/
 
 # Install dependencies
 echo_message "Installing dependencies..."
-pip install -e .
+pip3 install -e .
 
 if [ $? -eq 0 ]; then
     echo_message "Dependencies installed successfully."

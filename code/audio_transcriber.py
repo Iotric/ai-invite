@@ -118,6 +118,6 @@ def transcribe_single_file(audio_file: str, transcriber: AudioTranscriber) -> st
 
 # Usage example
 # if __name__ == "__main__":
-#     audio_directory = r"D:\Iotric\TRY-2\data\inputs"
+#     audio_directory = r"data\inputs"
 #     transcriber = AudioTranscriber(device="cpu")
 #     transcribe_directory(audio_directory, transcriber)

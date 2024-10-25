@@ -35,15 +35,15 @@ def run(input_video: str, output_audio: str, input_dict: dict, transcriber: Audi
             
             processed_transcription_list = process_transcription(transcription,input_dict,90)
             
-            for processed_transcription in processed_transcription_list:
+            for i,processed_transcription in enumerate(processed_transcription_list):
                 wav, sr, spect = cloner.infer(
                     ref_file=output_audio,
                     ref_text=transcription,
                     gen_text=processed_transcription,
-                    file_wave="data/outputs/final.wav"
+                    file_wave=f"data/outputs/final{i}.wav"
                 )
-            
-            logging.info("Clonning Done, Output Folder: data/outputs/")
+                extractor.replace_audio(wav,f"data/outputs/final{i}.mp4")
+            logging.info(f"Finally Done output Folder: data/outputs")
         else:
             logging.error("Audio extraction failed. Skipping transcription.")
 
@@ -51,9 +51,9 @@ def run(input_video: str, output_audio: str, input_dict: dict, transcriber: Audi
         logging.error(f"Error in main workflow: {str(e)}")
 
 if __name__ == "__main__":
-    input_video = r"D:\project\data\inputs\test.mp4"
-    output_audio = r"D:\project\data\outputs\output_audio.wav"
-    input_dict = {"nick":["himanshu"]}
+    input_video = r"data\inputs\test.mp4"
+    output_audio = r"data\outputs\output_audio.wav"
+    input_dict = {"nick":["Dana farbo"]}
 
     transcriber = AudioTranscriber(device="cpu")
     cloner = F5TTS()

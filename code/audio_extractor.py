@@ -1,6 +1,7 @@
 import subprocess
 import os
 import imageio_ffmpeg as ffmpeg
+from moviepy.editor import VideoFileClip, AudioFileClip
 import logging
 import warnings
 
@@ -81,14 +82,14 @@ class AudioExtractor:
             os.makedirs(output_dir)
             logging.info(f"Created output directory: {output_dir}")
 
-    def extract_audio(self) -> float:
+    def extract_audio(self) -> str:
         """
         Extracts the audio from the input video file using FFmpeg and returns its duration.
 
         Returns:
         --------
-        float
-            Duration of the extracted audio in seconds.
+        str
+            extracted audio path.
 
         Raises:
         -------
@@ -122,10 +123,36 @@ class AudioExtractor:
             logging.error(f"Error during audio extraction: {e}")
             raise RuntimeError("Audio extraction failed") from e
 
+    def replace_audio(self, new_audio: str, output_video: str) -> str:
+        """
+        Replaces the audio in a video file with new audio.
+
+        Parameters:
+        -----------
+        input_video : str
+            Path to the input video file.
+        new_audio : str
+            Path to the new audio file.
+        output_video : str
+            Path to the output video file.
+        """
+        if not os.path.exists(self.input_video) or not os.path.exists(new_audio):
+            logging.error("Input video or new audio file does not exist.")
+            return
+
+        video = VideoFileClip(self.input_video)
+        audio = AudioFileClip(new_audio)
+        video = video.set_audio(audio)
+        video.write_videofile(output_video)
+        logging.info(f"Audio replaced successfully in {output_video}")
+
 
 # if __name__ == "__main__":
 #     # Example usage with paths for input video and output audio
-#     input_video = r"D:\project\test.mp4"
-#     output_audio = r'outputs\output_audio.wav'
+#     input_video = r"data\inputs\test.mp4"
+#     output_audio = r"data\outputs\output_audio.wav"
+#     edited_audio = r"data\outputs\final.wav"
+#     output_video = r"data\outputs\final.mp4"
 #     extractor = AudioExtractor(input_video, output_audio)
-#     duration = extractor.extract_audio()
+#     output_audio = extractor.extract_audio()
+#     final_video = extractor.replace_audio(edited_audio, output_video)
