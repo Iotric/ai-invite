@@ -29,7 +29,7 @@ Follow the steps below to set up the project:
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com//ReVocalize.git
+   git clone https://github.com/himanshumahajan138/ReVocalize.git
    cd ReVocalize
    ```
 
