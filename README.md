@@ -29,8 +29,8 @@ Follow the steps below to set up the project:
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/himanshumahajan138/ReVocalize.git
-   cd ReVocalize
+   git clone https://github.com/Iotric/ai-invite.git
+   cd ai-invite
    ```
 
 2. **Run the setup script**:
