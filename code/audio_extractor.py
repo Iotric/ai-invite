@@ -149,10 +149,10 @@ class AudioExtractor:
 
 # if __name__ == "__main__":
 #     # Example usage with paths for input video and output audio
-#     input_video = r"data\inputs\test.mp4"
-#     output_audio = r"data\outputs\output_audio.wav"
-#     edited_audio = r"data\outputs\final.wav"
-#     output_video = r"data\outputs\final.mp4"
+#     input_video = r"data/inputs/test.mp4"
+#     output_audio = r"data/outputs/output_audio.wav"
+#     edited_audio = r"data/outputs/final.wav"
+#     output_video = r"data/outputs/final.mp4"
 #     extractor = AudioExtractor(input_video, output_audio)
 #     output_audio = extractor.extract_audio()
 #     final_video = extractor.replace_audio(edited_audio, output_video)
