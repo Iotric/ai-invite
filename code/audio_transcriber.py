@@ -4,6 +4,7 @@ import librosa
 import logging
 from transformers import AutoProcessor, WhisperForConditionalGeneration
 from typing import List, Dict
+import torch.nn.functional as F
 
 # Configure logging
 logging.basicConfig(
@@ -14,8 +15,14 @@ logging.basicConfig(
 
 
 class AudioTranscriber:
-    def __init__(self, model_name: str = "openai/whisper-small", device: str = "cpu"):
+    def __init__(
+        self,
+        language: str = "en",
+        model_name: str = "openai/whisper-small",
+        device: str = "cpu",
+    ):
         """Initialize the transcriber with the model and processor."""
+        self.language = language
         self.device = device
         self.processor = AutoProcessor.from_pretrained(model_name)
         self.model = WhisperForConditionalGeneration.from_pretrained(model_name).to(
@@ -50,6 +57,16 @@ class AudioTranscriber:
                 return_attention_mask=True,
                 sampling_rate=sample_rate,
             ).to(self.device)
+
+            # Ensure the mel spectrogram has 3000 frames (pad or trim if necessary)
+            mel_length = inputs["input_features"].shape[-1]
+            if mel_length < 3000:
+                inputs["input_features"] = F.pad(
+                    inputs["input_features"], (0, 3000 - mel_length)
+                )
+            elif mel_length > 3000:
+                inputs["input_features"] = inputs["input_features"][:, :, :3000]
+
             logging.info("Audio preprocessing completed.")
             return inputs
         except Exception as e:
@@ -59,9 +76,13 @@ class AudioTranscriber:
     def transcribe_audio(self, inputs: Dict[str, torch.Tensor]) -> List[Dict[str, str]]:
         """Generate transcription with word-level timestamps."""
         try:
-            generated_ids = self.model.generate(
-                **inputs, language="en", return_timestamps=True
-            )
+            if self.language == "":
+                generated_ids = self.model.generate(**inputs, return_timestamps=True)
+            else:
+                generated_ids = self.model.generate(
+                    **inputs, language=self.language, return_timestamps=True
+                )
+
             logging.info("Transcription generated successfully.")
             return self.processor.batch_decode(
                 generated_ids, output_word_offsets=True, skip_special_tokens=True
@@ -116,8 +137,8 @@ def transcribe_single_file(audio_file: str, transcriber: AudioTranscriber) -> st
     return transcription
 
 
-# Usage example
+# # Usage example
 # if __name__ == "__main__":
-#     audio_directory = r"data\inputs"
-#     transcriber = AudioTranscriber(device="cpu")
-#     transcribe_directory(audio_directory, transcriber)
+#     audio_directory = r"data/inputs"
+#     transcriber = AudioTranscriber(language="en",device="cpu")
+#     print(transcribe_directory(audio_directory, transcriber))
