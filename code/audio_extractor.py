@@ -1,7 +1,7 @@
 import subprocess
 import os
 import imageio_ffmpeg as ffmpeg
-from moviepy.editor import VideoFileClip, AudioFileClip
+from moviepy import *
 import logging
 import warnings
 

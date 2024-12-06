@@ -16,7 +16,7 @@ logging.basicConfig(
 
 class TranscriptionProcessor:
     def __init__(
-        self, transcription: str, input_dict: Dict[str, List[str]], threshold: int = 90
+        self, model: PunctuationModel, transcription: str, input_dict: Dict[str, List[str]], threshold: int = 90
     ):
         """
         Initializes the generator with the given transcription, dictionary of substitutions, and similarity threshold.
@@ -29,6 +29,7 @@ class TranscriptionProcessor:
         self.transcription = transcription
         self.input_dict = input_dict
         self.threshold = threshold
+        self.model = model
 
     def _get_replacement_options(self, word: str) -> List[str]:
         """
@@ -57,12 +58,10 @@ class TranscriptionProcessor:
         Returns:
             List: Transcription List with punctuation and capitalization restored.
         """
-        # Load the pre-trained punctuation model
-        model = PunctuationModel()
 
         for id, transcription in enumerate(transcription_list):
             # Restore punctuation and capitalization
-            transcription_list[id] = model.restore_punctuation(transcription)
+            transcription_list[id] = self.model.restore_punctuation(transcription)
 
         return transcription_list
 
@@ -109,6 +108,8 @@ class TranscriptionProcessor:
 
 # Example usage
 # if __name__ == "__main__":
+# Load the pre-trained punctuation model
+#     model = PunctuationModel(model="kredor/punctuate-all")
 #     transcription = "hey nick, how are you doing brother ?"
 #     input_dict = {
 #         "nick": ["dana farbo", "ben", "alex"],
@@ -116,5 +117,5 @@ class TranscriptionProcessor:
 #         "how": ["what", "why"],
 #     }
 
-#     generator = TranscriptionProcessor(transcription, input_dict, threshold=90)
+#     generator = TranscriptionProcessor(model, transcription, input_dict, threshold=90)
 #     generator.display_combinations()

@@ -170,3 +170,4 @@ code/audio_cloner/data/
 **/ckpts/
 **/wandb/
 **/results/
+test.py
