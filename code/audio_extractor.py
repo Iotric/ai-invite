@@ -142,7 +142,7 @@ class AudioExtractor:
 
         video = VideoFileClip(self.input_video)
         audio = AudioFileClip(new_audio)
-        video = video.set_audio(audio)
+        video = video.with_audio(audio)
         video.write_videofile(output_video)
         logging.info(f"Audio replaced successfully in {output_video}")
 
