@@ -1,6 +1,7 @@
 import streamlit as st
 import re
 import shutil
+import zipfile
 from pathlib import Path
 import pandas as pd
 import torch
@@ -13,8 +14,9 @@ from code.transcription_processor import TranscriptionProcessor
 
 # --- Constants ---
 CACHE_DIR = Path(".cache")
-if not CACHE_DIR.exists():
-    CACHE_DIR.mkdir()
+CACHE_OUTPUT_DIR = Path(f"{CACHE_DIR}/outputs")
+CACHE_DIR.mkdir(exist_ok=True)
+CACHE_OUTPUT_DIR.mkdir(exist_ok=True)
 
 LANGUAGE_OPTIONS = whisper_languages
 TRANSCRIPTION_MODEL_VARIANTS = whisper_models
@@ -175,6 +177,9 @@ def main():
         st.session_state["transcription"] = ""
     if "edited_data" not in st.session_state:
         st.session_state["edited_data"] = pd.DataFrame()
+    # Store the generated files persistently
+    if "generated_files" not in st.session_state:
+        st.session_state["generated_files"] = []
 
     # File Upload Handling
     uploaded_file = None
@@ -312,17 +317,22 @@ def main():
                     processed_transcription_list
                 )
 
+        # Display the list of generated videos or audio files
         if st.session_state["processed_transcription_list"]:
+            # Generate new videos or audio files only when the button is clicked
             if st.button("Let's Create Videos"):
                 processed_transcription_list = st.session_state[
                     "processed_transcription_list"
                 ]
+                generated_files = []  # Temporary list for newly created files
+
                 with st.spinner("Generating Videos..."):
                     for processed_transcription in processed_transcription_list:
                         changed_words = CLEAN_SENTENCE(processed_transcription)
                         different_words = [w for w in changed_words if w not in words]
-                        final_name = f"data/outputs/{'_'.join(different_words)}"
+                        final_name = f"{CACHE_OUTPUT_DIR}/{'_'.join(different_words)}"
 
+                        # Generate the audio or video file
                         wav, sr, spect = st.session_state["cloner"].infer(
                             ref_file=st.session_state["audio_file_path"],
                             ref_text=st.session_state["transcription"],
@@ -330,52 +340,54 @@ def main():
                             file_wave=f"{final_name}.wav",
                         )
                         if option == "Upload Video":
-                            final_audio = AudioExtractor(
+                            final_file = AudioExtractor(
                                 input_video=st.session_state["video_file_path"],
                                 output_audio="final_cache.wav",
                             ).replace_audio(f"{final_name}.wav", f"{final_name}.mp4")
-
+                            generated_files.append(f"{final_name}.mp4")
                         elif option == "Upload Audio":
-                            final_audio = f"{final_name}.wav"
+                            final_file = f"{final_name}.wav"
+                            generated_files.append(final_file)
 
-                        # Display the options to play and download
-                        st.subheader(divider="orange", body="Final Output")
-                        if option == "Upload Video":
-                            st.video(f"{final_name}.mp4")
+                # Update session state with newly generated files
+                st.session_state["generated_files"].extend(generated_files)
+
+            # Display previously generated files or newly generated ones
+            if st.session_state["generated_files"]:
+                st.subheader("Generated Outputs")
+                cols = st.columns(3)  # Create three columns per row for better layout
+                for i, file_path in enumerate(st.session_state["generated_files"]):
+                    with cols[i % 3]:  # Distribute files across columns
+                        if file_path.endswith(".mp4"):
+                            st.video(file_path)
                             st.download_button(
                                 label="Download Video",
-                                data=open(f"{final_name}.mp4", "rb"),
-                                file_name=f"{final_name}.mp4",
+                                data=open(file_path, "rb"),
+                                file_name=file_path.split("/")[-1],
                                 mime="video/mp4",
                             )
-                        else:
-                            st.audio(f"{final_name}.wav")
+                        elif file_path.endswith(".wav"):
+                            st.audio(file_path)
                             st.download_button(
                                 label="Download Audio",
-                                data=open(f"{final_name}.wav", "rb"),
-                                file_name=f"{final_name}.wav",
+                                data=open(file_path, "rb"),
+                                file_name=file_path.split("/")[-1],
                                 mime="audio/wav",
                             )
 
-                        # Prompt user for where to save
-                        save_location = st.text_input(
-                            "Enter the directory where you'd like to save the file:"
-                        )
-                        if save_location:
-                            save_path = (
-                                Path(save_location) / f"{final_name}.mp4"
-                                if option == "Upload Video"
-                                else Path(save_location) / f"{final_name}.wav"
-                            )
-                            shutil.move(
-                                (
-                                    f"{final_name}.mp4"
-                                    if option == "Upload Video"
-                                    else f"{final_name}.wav"
-                                ),
-                                save_path,
-                            )
-                            st.success(f"File saved to {save_path}")
+            # Bulk download as ZIP
+            if st.session_state["generated_files"]:
+                zip_path = f"{CACHE_OUTPUT_DIR}/generated_files.zip"
+                with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+                    for file_path in st.session_state["generated_files"]:
+                        zipf.write(file_path, Path(file_path).name)
+                with open(zip_path, "rb") as zipf:
+                    st.download_button(
+                        label="Download All as ZIP",
+                        data=zipf,
+                        file_name="generated_files.zip",
+                        mime="application/zip",
+                    )
 
 
 if __name__ == "__main__":
