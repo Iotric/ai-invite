@@ -36,3 +36,6 @@ wandb
 x_transformers
 zhconv
 zhon
+streamlit
+opencv-python
+streamlit-webrtc
