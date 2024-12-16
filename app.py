@@ -11,6 +11,7 @@ from code.audio_transcriber import AudioTranscriber
 from code.options import whisper_languages, whisper_models, punctuation_models
 from code.audio_cloner.src.f5_tts.api import F5TTS
 from code.transcription_processor import TranscriptionProcessor
+from code.thumbnail_generator import add_thumbnail_to_video
 
 # --- Constants ---
 CACHE_DIR = Path(".cache")
@@ -46,8 +47,9 @@ def load_models(
 
     reset_cache_dir()  # Ensure clean directory
 
-    # Load all models
+    # Load all models with a spinner to show loading state
     with st.spinner(f"Loading models for {selected_language} on {selected_gpu}..."):
+
         transcriber = AudioTranscriber(
             language=selected_language,
             model_name=f"openai/whisper-{selected_model_variant}",
@@ -85,7 +87,7 @@ def main():
     # --- Sidebar ---
     st.sidebar.title("Model Settings")
 
-    st.sidebar.subheader(divider="orange", body="Transcription Model")
+    st.sidebar.subheader("Transcription Model", divider="orange")
     selected_language = st.sidebar.selectbox(
         "Select Language", list(LANGUAGE_OPTIONS.keys())
     )
@@ -104,7 +106,7 @@ def main():
         st.sidebar.warning("CUDA is not available on this system. Defaulting to CPU.")
         selected_gpu = "CPU"
 
-    st.sidebar.subheader(divider="orange", body="Punctuation Model")
+    st.sidebar.subheader("Punctuation Model", divider="orange")
 
     selected_punctuation_model = st.sidebar.selectbox(
         "Select Model Variant", PUNCTUATION_MODEL_VARIANTS
@@ -146,7 +148,7 @@ def main():
     # --- Main Page ---
     st.write("# 🎵 Revocalize 🎙️")
 
-    st.subheader(divider="orange", body="Input Method")
+    st.subheader("Input Method", divider="orange")
     option = st.radio(
         "Choose an Input Method",
         ["Upload Video", "Upload Audio", "Live Capture"],
@@ -213,10 +215,13 @@ def main():
 
     # Show transcription and editable data only after file is uploaded/processed
     if st.session_state["transcription"]:
-        st.subheader(divider="orange", body="Transcription")
+        st.subheader("Transcription", divider="orange")
         st.code(body=st.session_state["transcription"], language=None, wrap_lines=True)
         words = CLEAN_SENTENCE(st.session_state["transcription"])
-        st.subheader(divider="orange", body="Edit Transcription")
+        st.subheader("Edit Transcription", divider="orange")
+        st.write(
+            "**Use ' . '(dot) for original word and ' \_ '(underscore) for skipping word in between Sentence**"
+        )
         transcription_data = {word: [""] for word in words}
 
         # Initialize the DataFrame only once
@@ -271,7 +276,7 @@ def main():
                     transcription_processor.process_transcription()
                 )
                 # Show processed transcription beautifully
-                st.subheader(divider="orange", body="Processed Transcriptions")
+                st.subheader("Processed Transcriptions", divider="orange")
 
                 def render_card(item, color="#1f1f1f"):
                     """Render a card for an item."""
@@ -326,10 +331,19 @@ def main():
                 ]
                 generated_files = []  # Temporary list for newly created files
 
+                # Initialize progress bar outside of the loop
+                progress_bar = st.progress(0)
+
                 with st.spinner("Generating Videos..."):
-                    for processed_transcription in processed_transcription_list:
+                    for idx, processed_transcription in enumerate(
+                        processed_transcription_list
+                    ):
+                        # Update the existing progress bar
                         changed_words = CLEAN_SENTENCE(processed_transcription)
                         different_words = [w for w in changed_words if w not in words]
+                        different_words = (
+                            ["default"] if different_words == [] else different_words
+                        )
                         final_name = f"{CACHE_OUTPUT_DIR}/{'_'.join(different_words)}"
 
                         # Generate the audio or video file
@@ -339,11 +353,21 @@ def main():
                             gen_text=processed_transcription,
                             file_wave=f"{final_name}.wav",
                         )
+
+                        # Update progress bar based on the iteration index
+                        progress_bar.progress(
+                            (idx + 1) / len(processed_transcription_list)
+                        )
+
                         if option == "Upload Video":
                             final_file = AudioExtractor(
                                 input_video=st.session_state["video_file_path"],
                                 output_audio="final_cache.wav",
                             ).replace_audio(f"{final_name}.wav", f"{final_name}.mp4")
+                            add_thumbnail_to_video(
+                                final_name.split("/")[-1].replace("_", " "),
+                                f"{final_name}.mp4",
+                            )
                             generated_files.append(f"{final_name}.mp4")
                         elif option == "Upload Audio":
                             final_file = f"{final_name}.wav"
@@ -354,12 +378,20 @@ def main():
 
             # Display previously generated files or newly generated ones
             if st.session_state["generated_files"]:
-                st.subheader("Generated Outputs")
+                st.subheader("Generated Outputs", divider="orange")
                 cols = st.columns(3)  # Create three columns per row for better layout
                 for i, file_path in enumerate(st.session_state["generated_files"]):
                     with cols[i % 3]:  # Distribute files across columns
                         if file_path.endswith(".mp4"):
                             st.video(file_path)
+                            # Custom HTML for video with embedded thumbnail
+                            # video_html = f"""
+                            # <video controls  poster='{file_path.replace(".mp4", "_thumbnail.png")}' src="{file_path}" style="width:100%">
+                            # </video>
+                            # """
+                            # # st.markdown(video_html, unsafe_allow_html=True)
+                            # st.video(file_path)
+
                             st.download_button(
                                 label="Download Video",
                                 data=open(file_path, "rb"),
