@@ -16,7 +16,11 @@ logging.basicConfig(
 
 class TranscriptionProcessor:
     def __init__(
-        self, model: PunctuationModel, transcription: str, input_dict: Dict[str, List[str]], threshold: int = 90
+        self,
+        model: PunctuationModel,
+        transcription: str,
+        input_dict: Dict[str, List[str]],
+        threshold: int = 90,
     ):
         """
         Initializes the generator with the given transcription, dictionary of substitutions, and similarity threshold.
@@ -30,6 +34,7 @@ class TranscriptionProcessor:
         self.input_dict = input_dict
         self.threshold = threshold
         self.model = model
+        print(self.input_dict)
 
     def _get_replacement_options(self, word: str) -> List[str]:
         """
@@ -67,34 +72,35 @@ class TranscriptionProcessor:
 
     def process_transcription(self) -> List[str]:
         """
-        Generates all possible sentence combinations based on the replacement options.
+        Generates all possible sentence combinations based on index alignment of replacement options.
 
         Returns:
             List[str]: List of all possible sentence combinations.
         """
-        clean_sentence = lambda s: re.sub(r"[^\w\s]", "", s).split()
-        tokens = clean_sentence(self.transcription)
-        replaceable_words = []
-
-        # Determine replacement options for each token in the transcription
-        for token in tokens:
-            replacements = self._get_replacement_options(token)
-
-            # Ensure replacements are non-empty; if empty, add the original word
-            if replacements:
-                replaceable_words.append(replacements)
-            else:
-                replaceable_words.append(
-                    [token]
-                )  # Default to original word if no replacements found
-
-        # Use Cartesian product to create all possible combinations
-        all_combinations = list(product(*replaceable_words))
-        result = [" ".join(words) for words in all_combinations]
-
+        # Clean the transcription and tokenize
+        tokens = re.sub(r"[^\w\s]", "", self.transcription).split()
+        max_length = max((len(replacements) for replacements in self.input_dict.values()), default=1)
+        results = []
+        for idx in range(max_length):
+            sentence = []
+            for token in tokens:
+                replacements = self.input_dict.get(token.lower(), [])
+                if idx < len(replacements):
+                    replacement = replacements[idx]
+                    if replacement == "_":  # Skip the word
+                        continue
+                    elif replacement == ".":  # Use the original word
+                        sentence.append(token)
+                    else:  # Use the replacement word
+                        sentence.append(replacement)
+                else:  # Fallback to the original word if no replacements are left
+                    sentence.append(token)
+            results.append(" ".join(sentence))
+        
+        result = list(filter(None, set(results)))
         # apply punctuation
         result = self._restore_punctuation(result)
-
+        
         return result
 
     def display_combinations(self) -> None:
@@ -108,7 +114,7 @@ class TranscriptionProcessor:
 
 # Example usage
 # if __name__ == "__main__":
-# Load the pre-trained punctuation model
+#     # Load the pre-trained punctuation model
 #     model = PunctuationModel(model="kredor/punctuate-all")
 #     transcription = "hey nick, how are you doing brother ?"
 #     input_dict = {
