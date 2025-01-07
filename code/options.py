@@ -101,11 +101,3 @@ whisper_languages = {
 }
 
 whisper_models = ["small", "tiny", "base", "medium", "large", "large-v2"]
-
-punctuation_models = [
-    "kredor/punctuate-all",
-    "softcatala/fullstop-catalan-punctuation-prediction",
-    "oliverguhr/fullstop-punctuation-multilang-large",
-    "oliverguhr/fullstop-punctuation-multilingual-sonar-base",
-    "oliverguhr/fullstop-dutch-sonar-punctuation-prediction",
-]

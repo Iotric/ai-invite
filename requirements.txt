@@ -1,3 +1,4 @@
+--extra-index-url https://download.pytorch.org/whl/cu118
 accelerate
 bitsandbytes
 cached_path
@@ -25,8 +26,8 @@ soundfile
 spaces
 thop
 tomli
-torch
-torchaudio
+torch==2.3.0+cu118
+torchaudio==2.3.0+cu118
 torchdiffeq
 tqdm
 transformers

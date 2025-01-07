@@ -1,4 +1,3 @@
-import os
 import torch
 import librosa
 import logging
@@ -104,37 +103,37 @@ class AudioTranscriber:
             raise
 
 
-def transcribe_directory(audio_directory: str, transcriber: AudioTranscriber) -> str:
-    """Process all audio files in a directory and print transcriptions."""
-    for audio_file in os.listdir(audio_directory):
-        audio_path = os.path.join(audio_directory, audio_file)
-        if not audio_file.lower().endswith((".wav", ".mp3", ".flac", ".ogg")):
-            logging.warning(f"Skipping unsupported file: {audio_file}")
-            continue
-        transcription = ""
-        try:
-            transcription = transcriber.transcribe_file(audio_path)
-        except Exception as e:
-            logging.error(f"Failed to process {audio_file}: {str(e)}")
+# def transcribe_directory(audio_directory: str, transcriber: AudioTranscriber) -> str:
+#     """Process all audio files in a directory and print transcriptions."""
+#     for audio_file in os.listdir(audio_directory):
+#         audio_path = os.path.join(audio_directory, audio_file)
+#         if not audio_file.lower().endswith((".wav", ".mp3", ".flac", ".ogg")):
+#             logging.warning(f"Skipping unsupported file: {audio_file}")
+#             continue
+#         transcription = ""
+#         try:
+#             transcription = transcriber.transcribe_file(audio_path)
+#         except Exception as e:
+#             logging.error(f"Failed to process {audio_file}: {str(e)}")
 
-        return transcription
+#         return transcription
 
 
-def transcribe_single_file(audio_file: str, transcriber: AudioTranscriber) -> str:
-    """
-    Transcribe a specific audio file and print the transcription.
+# def transcribe_single_file(audio_file: str, transcriber: AudioTranscriber) -> str:
+#     """
+#     Transcribe a specific audio file and print the transcription.
 
-    Args:
-        audio_file (str): Path to the audio file to be transcribed.
-        transcriber (AudioTranscriber): An instance of the AudioTranscriber class.
-    """
-    transcription = ""
-    try:
-        transcription = transcriber.transcribe_file(audio_file)
-    except Exception as e:
-        logging.error(f"Failed to transcribe {audio_file}: {str(e)}")
+#     Args:
+#         audio_file (str): Path to the audio file to be transcribed.
+#         transcriber (AudioTranscriber): An instance of the AudioTranscriber class.
+#     """
+#     transcription = ""
+#     try:
+#         transcription = transcriber.transcribe_file(audio_file)
+#     except Exception as e:
+#         logging.error(f"Failed to transcribe {audio_file}: {str(e)}")
 
-    return transcription
+#     return transcription
 
 
 # # Usage example

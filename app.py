@@ -5,12 +5,10 @@ import zipfile
 from pathlib import Path
 import pandas as pd
 import torch
-from deepmultilingualpunctuation import PunctuationModel
 from code.audio_extractor import AudioExtractor
 from code.audio_transcriber import AudioTranscriber
-from code.options import whisper_languages, whisper_models, punctuation_models
+from code.options import whisper_languages, whisper_models
 from code.audio_cloner.src.f5_tts.api import F5TTS
-from code.transcription_processor import TranscriptionProcessor
 from code.thumbnail_generator import add_thumbnail_to_video
 
 # --- Constants ---
@@ -21,12 +19,11 @@ CACHE_OUTPUT_DIR.mkdir(exist_ok=True)
 
 LANGUAGE_OPTIONS = whisper_languages
 TRANSCRIPTION_MODEL_VARIANTS = whisper_models
-PUNCTUATION_MODEL_VARIANTS = punctuation_models
 CLEAN_SENTENCE = lambda s: re.sub(r"[^\w\s]", "", s).lower().split()
 
 
 # --- Helper Functions ---
-def save_uploaded_file(uploaded_file, file_type):
+def save_uploaded_file(uploaded_file):
     file_path = CACHE_DIR / uploaded_file.name
     with open(file_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
@@ -38,11 +35,10 @@ def reset_cache_dir():
     if CACHE_DIR.exists():
         shutil.rmtree(CACHE_DIR)
     CACHE_DIR.mkdir()
+    torch.cuda.empty_cache()
 
 
-def load_models(
-    selected_language, selected_model_variant, selected_gpu, selected_punctuation_model
-):
+def load_models(selected_language, selected_model_variant, selected_gpu):
     """Initialize all models with selected parameters."""
 
     reset_cache_dir()  # Ensure clean directory
@@ -55,9 +51,8 @@ def load_models(
             model_name=f"openai/whisper-{selected_model_variant}",
             device=selected_gpu.lower(),
         )
-        cloner = F5TTS()
-        punctuation_model = PunctuationModel(model=selected_punctuation_model)
-    return transcriber, cloner, punctuation_model
+
+    return transcriber
 
 
 def get_gpu_setting():
@@ -106,14 +101,6 @@ def main():
         st.sidebar.warning("CUDA is not available on this system. Defaulting to CPU.")
         selected_gpu = "CPU"
 
-    st.sidebar.subheader("Punctuation Model", divider="orange")
-
-    selected_punctuation_model = st.sidebar.selectbox(
-        "Select Model Variant", PUNCTUATION_MODEL_VARIANTS
-    )
-    # Add model-specific parameters for each model in the sidebar
-    threshold = st.sidebar.slider("Threshold", 0, 100, 90)
-
     # Initialize session state
     if "transcriber" not in st.session_state:
         st.session_state["transcriber"] = None
@@ -121,8 +108,6 @@ def main():
             "language": None,
             "transcription_model_variant": None,
             "gpu": None,
-            "punctuation_model_variant": None,
-            "threshold": None,
         }
         st.session_state["input_method"] = ""  # Track current input method
 
@@ -141,8 +126,6 @@ def main():
         "language": selected_language,
         "model_variant": selected_model_variant,
         "gpu": selected_gpu,
-        "punctuation_model_variant": selected_punctuation_model,
-        "threshold": threshold,
     }
 
     # --- Main Page ---
@@ -163,20 +146,17 @@ def main():
         st.session_state["transcriber"] is None
         or st.session_state["model_params"] != current_params
     ):
-        (
-            st.session_state["transcriber"],
-            st.session_state["cloner"],
-            st.session_state["punctuation_model"],
-        ) = load_models(
+        st.session_state["transcriber"] = load_models(
             selected_language,
             selected_model_variant,
             selected_gpu,
-            selected_punctuation_model,
         )
 
     # Initialize session state for transcription and edited data
     if "transcription" not in st.session_state:
         st.session_state["transcription"] = ""
+    if "text_boxes" not in st.session_state:
+        st.session_state.text_boxes = []
     if "edited_data" not in st.session_state:
         st.session_state["edited_data"] = pd.DataFrame()
     # Store the generated files persistently
@@ -197,7 +177,7 @@ def main():
         st.info("Live capture is currently under development.")
 
     if uploaded_file and st.session_state["transcription"] == "":
-        file_path = save_uploaded_file(uploaded_file, option.split(" ")[1].lower())
+        file_path = save_uploaded_file(uploaded_file)
         st.session_state["audio_file_path"] = file_path
         with st.spinner("Processing file..."):
             if option == "Upload Video":
@@ -219,62 +199,44 @@ def main():
         st.code(body=st.session_state["transcription"], language=None, wrap_lines=True)
         words = CLEAN_SENTENCE(st.session_state["transcription"])
         st.subheader("Edit Transcription", divider="orange")
-        st.write(
-            "**Use ' . '(dot) for original word and ' \_ '(underscore) for skipping word in between Sentence**"
-        )
-        transcription_data = {word: [""] for word in words}
-
-        # Initialize the DataFrame only once
-        if st.session_state["edited_data"].empty:
-            st.session_state["edited_data"] = pd.DataFrame.from_dict(
-                transcription_data, orient="index", columns=["Replacements"]
-            )
-            st.session_state["edited_data"].index.name = "Word"
-
-        # Display the Data Editor
-        edited_df = st.data_editor(
-            st.session_state["edited_data"],
-            key="transcription_editor",
+        if st.session_state.text_boxes == []:
+            st.session_state.text_boxes = [st.session_state["transcription"]]
+        # Display and manage text boxes with delete functionality
+        for i, text in enumerate(st.session_state.text_boxes):
+            cols = st.columns([8, 1], vertical_alignment="center")
+            with cols[0]:
+                st.session_state.text_boxes[i] = st.text_area(
+                    label=f"Transcription No. : {i+1}",
+                    label_visibility="visible",
+                    value=text,
+                    key=f"text_box_{i}",
+                )
+            with cols[1]:
+                if i > 0:  # show this only if there are more than one trascription
+                    st.button(
+                        "❌",
+                        key=f"delete_button_{i}",
+                        on_click=lambda i=i: st.session_state.text_boxes.pop(i),
+                        use_container_width=True,
+                    )
+        # Add a button to add new text boxes
+        st.button(
+            "Add Text Box",
+            on_click=lambda: st.session_state.text_boxes.append(
+                st.session_state["transcription"]
+            ),
             use_container_width=True,
         )
 
         # --- Submit Button ---
-        if st.button("Submit Changes"):
+        if st.button("Submit Changes", use_container_width=True):
             # Update edited data in session state
-            st.session_state["edited_data"].update(edited_df)
+            # st.session_state["edited_data"].update(edited_df)
             with st.spinner("Submitting changes..."):
-                # Filter rows with non-empty replacements
-                edited_df_filtered = st.session_state["edited_data"].dropna(
-                    subset=["Replacements"]
-                )
-                replaced_data = edited_df_filtered[
-                    edited_df_filtered["Replacements"] != ""
-                ]
-
-                # Convert to dictionary with word as the key
-                result_dict = (
-                    replaced_data["Replacements"]
-                    .apply(
-                        lambda x: [
-                            item.strip() for item in x.split(",") if item.strip()
-                        ]
-                    )
-                    .to_dict()
-                )
-
-                transcription_processor = TranscriptionProcessor(
-                    model=st.session_state["punctuation_model"],
-                    transcription=st.session_state["transcription"],
-                    input_dict=result_dict,
-                    threshold=threshold,
-                )
-
                 # Process and save changes
                 st.success("Changes submitted successfully!")
 
-                processed_transcription_list = (
-                    transcription_processor.process_transcription()
-                )
+                processed_transcription_list = st.session_state.text_boxes
                 # Show processed transcription beautifully
                 st.subheader("Processed Transcriptions", divider="orange")
 
@@ -325,7 +287,7 @@ def main():
         # Display the list of generated videos or audio files
         if st.session_state["processed_transcription_list"]:
             # Generate new videos or audio files only when the button is clicked
-            if st.button("Let's Create Videos"):
+            if st.button("Let's Create Videos", use_container_width=True):
                 processed_transcription_list = st.session_state[
                     "processed_transcription_list"
                 ]
@@ -347,7 +309,7 @@ def main():
                         final_name = f"{CACHE_OUTPUT_DIR}/{'_'.join(different_words)}"
 
                         # Generate the audio or video file
-                        wav, sr, spect = st.session_state["cloner"].infer(
+                        wav, sr, spect = F5TTS().infer(
                             ref_file=st.session_state["audio_file_path"],
                             ref_text=st.session_state["transcription"],
                             gen_text=processed_transcription,
@@ -384,19 +346,13 @@ def main():
                     with cols[i % 3]:  # Distribute files across columns
                         if file_path.endswith(".mp4"):
                             st.video(file_path)
-                            # Custom HTML for video with embedded thumbnail
-                            # video_html = f"""
-                            # <video controls  poster='{file_path.replace(".mp4", "_thumbnail.png")}' src="{file_path}" style="width:100%">
-                            # </video>
-                            # """
-                            # # st.markdown(video_html, unsafe_allow_html=True)
-                            # st.video(file_path)
 
                             st.download_button(
                                 label="Download Video",
                                 data=open(file_path, "rb"),
                                 file_name=file_path.split("/")[-1],
                                 mime="video/mp4",
+                                use_container_width=True,
                             )
                         elif file_path.endswith(".wav"):
                             st.audio(file_path)
@@ -405,6 +361,7 @@ def main():
                                 data=open(file_path, "rb"),
                                 file_name=file_path.split("/")[-1],
                                 mime="audio/wav",
+                                use_container_width=True,
                             )
 
             # Bulk download as ZIP
@@ -419,6 +376,7 @@ def main():
                         data=zipf,
                         file_name="generated_files.zip",
                         mime="application/zip",
+                        use_container_width=True,
                     )
 
 

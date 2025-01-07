@@ -101,12 +101,14 @@ def load_vocoder(is_local=False, local_path="", device=device):
 asr_pipe = None
 
 
-def initialize_asr_pipeline(device=device):
+def initialize_asr_pipeline(device: str = device, dtype=None):
+    if dtype is None:
+        dtype = torch.float32 #added
     global asr_pipe
     asr_pipe = pipeline(
         "automatic-speech-recognition",
         model="openai/whisper-large-v3-turbo",
-        torch_dtype=torch.float16,
+        torch_dtype=dtype,
         device=device,
     )
 
@@ -114,7 +116,10 @@ def initialize_asr_pipeline(device=device):
 # load model checkpoint for inference
 
 
-def load_checkpoint(model, ckpt_path, device, use_ema=True):
+def load_checkpoint(model, ckpt_path, device: str, dtype=None, use_ema=True):
+    if dtype is None:
+        dtype = torch.float32 # added
+    
     if device == "cuda":
         model = model.half()
 
@@ -140,7 +145,7 @@ def load_checkpoint(model, ckpt_path, device, use_ema=True):
             checkpoint = {"model_state_dict": checkpoint}
         model.load_state_dict(checkpoint["model_state_dict"])
 
-    return model.to(device)
+    return model.to(dtype)
 
 
 # load model for inference
