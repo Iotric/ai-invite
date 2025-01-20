@@ -10,6 +10,7 @@ from code.audio_transcriber import AudioTranscriber
 from code.options import whisper_languages, whisper_models
 from code.audio_cloner.src.f5_tts.api import F5TTS
 from code.thumbnail_generator import add_thumbnail_to_video
+from code.text_processor import process_text, compute_similarity
 
 # --- Constants ---
 CACHE_DIR = Path(".cache")
@@ -68,14 +69,11 @@ def reset_state_on_change(new_method, new_params):
     if st.session_state.get("input_method") != new_method:
         st.session_state["input_method"] = new_method
         st.session_state["transcription"] = ""
-        st.session_state["edited_data"] = pd.DataFrame()
 
     # Reset on model parameter change
     if st.session_state.get("model_params") != new_params:
         st.session_state["model_params"] = new_params
         st.session_state["transcription"] = ""
-        st.session_state["edited_data"] = pd.DataFrame()
-
 
 # --- Streamlit App ---
 def main():
@@ -100,6 +98,8 @@ def main():
     if system_gpu == "CPU" and selected_gpu == "CUDA":
         st.sidebar.warning("CUDA is not available on this system. Defaulting to CPU.")
         selected_gpu = "CPU"
+    
+    threshold = st.sidebar.slider("Similarity Threshold", 70, 100, 80)/100
 
     # Initialize session state
     if "transcriber" not in st.session_state:
@@ -108,6 +108,7 @@ def main():
             "language": None,
             "transcription_model_variant": None,
             "gpu": None,
+            "threshold": None,
         }
         st.session_state["input_method"] = ""  # Track current input method
 
@@ -126,6 +127,7 @@ def main():
         "language": selected_language,
         "model_variant": selected_model_variant,
         "gpu": selected_gpu,
+        "threshold": threshold,
     }
 
     # --- Main Page ---
@@ -198,6 +200,9 @@ def main():
         st.subheader("Transcription", divider="orange")
         st.code(body=st.session_state["transcription"], language=None, wrap_lines=True)
         words = CLEAN_SENTENCE(st.session_state["transcription"])
+        allowed_words, disallowed_words = process_text(st.session_state["transcription"], selected_language)
+        
+        
         st.subheader("Edit Transcription", divider="orange")
         if st.session_state.text_boxes == []:
             st.session_state.text_boxes = [st.session_state["transcription"]]
@@ -209,7 +214,7 @@ def main():
                     label=f"Transcription No. : {i+1}",
                     label_visibility="visible",
                     value=text,
-                    key=f"text_box_{i}"
+                    key=f"text_box_{i}",
                 )
             with cols[1]:
                 if i > 0:  # show this only if there are more than one trascription
@@ -233,7 +238,16 @@ def main():
             # Update edited data in session state
             # st.session_state["edited_data"].update(edited_df)
             with st.spinner("Submitting changes..."):
-                # Process and save changes
+                for i, text in enumerate(st.session_state.text_boxes):
+                    similarity_score = compute_similarity(st.session_state["transcription"], st.session_state.text_boxes[i], selected_language)
+                    if similarity_score < threshold:
+                        st.warning(
+                            f"Edited text is too different from original in Transcription No. : {i+1}.\n"
+                            f"Similarity score [ {round(similarity_score, 2)*100}% ] is below the threshold of [ {threshold*100}% ].",
+                            icon="⚠️"
+                        )
+                        return
+                    # Process and save changes
                 st.success("Changes submitted successfully!")
 
                 processed_transcription_list = st.session_state.text_boxes
@@ -247,8 +261,8 @@ def main():
                         <div style="
                             background-color: {color}; 
                             padding: 15px; 
-                            margin: 10px 0; 
-                            border-radius: 10px; 
+                            margin: 10px 0;
+                            border-radius: 10px;
                             box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
                         ">
                             <p style="font-size: 16px; color: #e0e0e0;">{item}</p>
@@ -297,6 +311,7 @@ def main():
                 progress_bar = st.progress(0)
 
                 with st.spinner("Generating Videos..."):
+                    cloner = F5TTS(model_type="F5-TTS", device=selected_gpu.lower())
                     for idx, processed_transcription in enumerate(
                         processed_transcription_list
                     ):
@@ -309,7 +324,7 @@ def main():
                         final_name = f"{CACHE_OUTPUT_DIR}/{'_'.join(different_words)}"
 
                         # Generate the audio or video file
-                        wav, sr, spect = F5TTS().infer(
+                        wav, sr, spect = cloner.infer(
                             ref_file=st.session_state["audio_file_path"],
                             ref_text=st.session_state["transcription"],
                             gen_text=processed_transcription,

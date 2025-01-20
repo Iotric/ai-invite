@@ -10,6 +10,7 @@ from code.audio_transcriber import AudioTranscriber
 from code.options import whisper_languages, whisper_models
 from code.audio_cloner.src.f5_tts.api import F5TTS
 from code.thumbnail_generator import add_thumbnail_to_video
+from code.text_processor import process_text,apply_replacements_to_transcription
 
 # --- Constants ---
 CACHE_DIR = Path(".cache")
@@ -75,7 +76,6 @@ def reset_state_on_change(new_method, new_params):
         st.session_state["model_params"] = new_params
         st.session_state["transcription"] = ""
         st.session_state["edited_data"] = pd.DataFrame()
-
 
 # --- Streamlit App ---
 def main():
@@ -155,10 +155,8 @@ def main():
     # Initialize session state for transcription and edited data
     if "transcription" not in st.session_state:
         st.session_state["transcription"] = ""
-    if "text_boxes" not in st.session_state:
-        st.session_state.text_boxes = []
-    if "edited_data" not in st.session_state:
-        st.session_state["edited_data"] = pd.DataFrame()
+    if "edited_data_list" not in st.session_state:
+        st.session_state["edited_data_list"] = []
     # Store the generated files persistently
     if "generated_files" not in st.session_state:
         st.session_state["generated_files"] = []
@@ -198,47 +196,89 @@ def main():
         st.subheader("Transcription", divider="orange")
         st.code(body=st.session_state["transcription"], language=None, wrap_lines=True)
         words = CLEAN_SENTENCE(st.session_state["transcription"])
+        allowed_words, disallowed_words = process_text(st.session_state["transcription"], selected_language)
+        
         st.subheader("Edit Transcription", divider="orange")
-        if st.session_state.text_boxes == []:
-            st.session_state.text_boxes = [st.session_state["transcription"]]
-        # Display and manage text boxes with delete functionality
-        for i, text in enumerate(st.session_state.text_boxes):
+
+        # Initialize the first data editor only if the list is empty
+        if not st.session_state.get("edited_data_list"):
+            transcription_data = {word: [""] for word in allowed_words}
+            initial_data = pd.DataFrame.from_dict(
+                transcription_data, orient="index", columns=["Replacements"]
+            )
+            initial_data.index.name = "Word"
+            st.session_state["edited_data_list"] = [initial_data]  # Initialize with one editor
+
+        # Display and manage data editors
+        for i, edited_data in enumerate(st.session_state["edited_data_list"]):
             cols = st.columns([8, 1], vertical_alignment="center")
             with cols[0]:
-                st.session_state.text_boxes[i] = st.text_area(
-                    label=f"Transcription No. : {i+1}",
-                    label_visibility="visible",
-                    value=text,
-                    key=f"text_box_{i}"
+                # Update the session state with changes from the data editor
+                st.session_state["edited_data_list"][i] = st.data_editor(
+                    edited_data,
+                    key=f"data_editor_{i}",
+                    use_container_width=True,
                 )
             with cols[1]:
-                if i > 0:  # show this only if there are more than one trascription
+                if i > 0:  # Show delete button only for additional editors
                     st.button(
                         "❌",
                         key=f"delete_button_{i}",
-                        on_click=lambda i=i: st.session_state.text_boxes.pop(i),
+                        on_click=lambda i=i: st.session_state["edited_data_list"].pop(i),
                         use_container_width=True,
                     )
-        # Add a button to add new text boxes
+
+        # Add a button to add new data editors
         st.button(
-            "Add Text Box",
-            on_click=lambda: st.session_state.text_boxes.append(
-                st.session_state["transcription"]
+            "Add Data Editor",
+            on_click=lambda: st.session_state["edited_data_list"].append(
+                pd.DataFrame.from_dict(
+                    {word: [""] for word in allowed_words},
+                    orient="index",
+                    columns=["Replacements"],
+                ).rename_axis("Word")
             ),
             use_container_width=True,
         )
 
         # --- Submit Button ---
         if st.button("Submit Changes", use_container_width=True):
-            # Update edited data in session state
-            # st.session_state["edited_data"].update(edited_df)
             with st.spinner("Submitting changes..."):
+                # Collect dictionaries from all editors
+                all_editor_results = []
+
+                for edited_data in st.session_state["edited_data_list"]:
+                    # Drop rows where 'Replacements' column is empty
+                    filtered_data = edited_data.dropna(subset=["Replacements"])
+                    
+                    # Ensure 'Replacements' is treated as a list
+                    filtered_data["Replacements"] = filtered_data["Replacements"].apply(
+                        lambda x: [item.strip() for item in str(x).split(",") if item.strip()]
+                    )
+                    
+                    # Ensure "Word" exists as a column before setting it as the index
+                    if "Word" not in filtered_data.columns:
+                        filtered_data.reset_index(inplace=True)  # Convert index to column
+                    
+                    if "Word" in filtered_data.columns:
+                        # Convert the filtered DataFrame to a dictionary
+                        editor_dict = filtered_data.set_index("Word")["Replacements"].to_dict()
+                        # Append the dictionary to the list
+                        all_editor_results.append(editor_dict)
+                    else:
+                        raise ValueError("The 'Word' column is missing from the DataFrame.")
+
+                # send dictionaries for further processing
+                processed_transcription_list = apply_replacements_to_transcription(
+                    st.session_state["transcription"], all_editor_results
+                )
+                
                 # Process and save changes
                 st.success("Changes submitted successfully!")
 
-                processed_transcription_list = st.session_state.text_boxes
                 # Show processed transcription beautifully
                 st.subheader("Processed Transcriptions", divider="orange")
+
 
                 def render_card(item, color="#1f1f1f"):
                     """Render a card for an item."""
@@ -297,6 +337,7 @@ def main():
                 progress_bar = st.progress(0)
 
                 with st.spinner("Generating Videos..."):
+                    cloner = F5TTS(model_type="F5-TTS", device=selected_gpu.lower())
                     for idx, processed_transcription in enumerate(
                         processed_transcription_list
                     ):
@@ -309,7 +350,7 @@ def main():
                         final_name = f"{CACHE_OUTPUT_DIR}/{'_'.join(different_words)}"
 
                         # Generate the audio or video file
-                        wav, sr, spect = F5TTS().infer(
+                        wav, sr, spect = cloner.infer(
                             ref_file=st.session_state["audio_file_path"],
                             ref_text=st.session_state["transcription"],
                             gen_text=processed_transcription,

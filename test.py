@@ -1,29 +1,46 @@
-import streamlit as st
+############################################ This is Just a Test File (for development purposes) ############################################
 
-# Initialize session state for dynamic text boxes
-if "text_boxes" not in st.session_state:
-    st.session_state.text_boxes = ["Default Text"]  # Start with one default text box
 
-st.title("Dynamic Form with Addable Text Boxes")
+# import spacy
+# import subprocess
+# import sys
 
-# Function to add a new text box
-def add_text_box():
-    st.session_state.text_boxes.append("New Text")
 
-# Render text boxes dynamically
-st.write("Fill out the text boxes below:")
-for i, text in enumerate(st.session_state.text_boxes):
-    st.session_state.text_boxes[i] = st.text_input(
-        label=f"Text Box {i+1}",
-        value=text,
-        key=f"text_box_{i}"
-    )
+# # Function to download and load spaCy language model
+# def load_spacy_model(lang_model):
+#     try:
+#         # Try loading the model
+#         return spacy.load(lang_model)
+#     except OSError:
+#         print(f"Model '{lang_model}' not found. Downloading now...")
+#         # Download the model if not already installed
+#         subprocess.check_call([sys.executable, "-m", "spacy", "download", lang_model])
+#         # Load the model after downloading
+#         return spacy.load(lang_model)
 
-# Add a button to add new text boxes
-st.button("Add Text Box", on_click=add_text_box)
 
-# Submit button to process the inputs
-if st.button("Submit"):
-    st.success("Form submitted successfully!")
-    st.write("Here are your inputs:")
-    st.json(st.session_state.text_boxes)
+# # Define the language model (e.g., 'en_core_web_sm' for English)
+# lang_model = "en_core_web_sm"
+
+# # Load the spaCy model (with automated downloading)
+# nlp = load_spacy_model(lang_model)
+
+# # Input text
+# text = "Hey Nick, how you doing brother? It's Dean Norris here, aka ASAC Schrader. Rip Hank is right. Hey, thanks for being a fan man, we appreciate that very much. But more importantly, happy birthday man! 31st, yeah!"
+
+# # Process the text
+# doc = nlp(text)
+
+# for token in doc:
+#     print(token.text + " - " + token.pos_)
+#     # print(token.text, token.pos_)
+# # # Identify nouns and other parts of speech
+# # nouns = [token.text for token in doc if token.pos_ == "NOUN"]
+# # pronouns = [token.text for token in doc if token.pos_ == "PRON"]
+# # verbs = [token.text for token in doc if token.pos_ == "VERB"]
+# # adjectives = [token.text for token in doc if token.pos_ == "ADJ"]
+
+# # print("Nouns:", nouns)
+# # print("Pronouns:", pronouns)
+# # print("Verbs:", verbs)
+# # print("Adjectives:", adjectives)
