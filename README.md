@@ -1,95 +1,116 @@
-# **ReVocalize**: Your Voice, Reimagined.
+# **ReVocalize: Text Processing Pipeline**
 
 ## Overview
-The ReVocalize Project is designed to extract audio from video files, transcribe the audio, replacing the required words from the audio and use voice cloning techniques to generate new audio outputs. This project integrates various components such as audio extraction, transcription, replacing words and voice synthesis, providing a seamless workflow for audio processing.
+
+The **Text Processing Pipeline** branch of ReVocalize focuses on robust text analysis and transformation, leveraging NLP tools to process transcriptions, apply custom word replacements, and compute semantic similarities. This module integrates spaCy for language processing and provides utilities to streamline text-based operations in the ReVocalize workflow.
 
 ## Table of Contents
+
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Code Structure](#code-structure)
+- [Code Explanation](#code-explanation)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Features
-- **Audio Extraction**: Extract audio from various video formats.
-- **Audio Transcription**: Transcribe the extracted audio using advanced models.
-- **Replacing Words**: Replace the Required words from the audio and then regenerate audio.
-- **Voice Cloning**: Clone voices based on transcriptions to generate new audio outputs.
-- **Logging**: Monitor the process with detailed logging.
+
+- **Language Support**: Dynamically load and manage spaCy language models.
+- **Text Processing**: Extract nouns, pronouns, and other tokens for analysis.
+- **Word Replacement**: Apply custom replacement rules to transform transcriptions.
+- **Text Similarity**: Compute semantic similarity between text pairs using spaCy.
 
 ## Prerequisites
-Before you begin, ensure you have met the following requirements:
-- Python 3.10 or higher installed on your machine.
-- `virtualenv` package for creating virtual environments.
+
+Before you begin, ensure you have:
+
+- Python 3.10 or higher installed.
+- `pip` and `virtualenv` installed for managing dependencies.
 
 ## Installation
-Follow the steps below to set up the project:
+
+Follow these steps to set up the text processing pipeline:
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/himanshumahajan138/ReVocalize.git
    cd ReVocalize
+   git checkout text-processing-pipeline
    ```
 
-2. **Run the setup script**:
-   - For macOS/Linux:
-     ```bash
-     chmod +x setup.sh
-     ./setup.sh
-     ```
+2. **Set up the environment**:
 
-   - For Windows:
-     ```batch
-     setup.bat
-     ```
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+   pip install -r requirements.txt
+   ```
 
-3. **Activate the virtual environment**:
-     ```bash
-     venv\Scripts\activate
-     ```
-
-4. **Install dependencies**:
-   The setup script will automatically install the required dependencies.
+3. **Install spaCy models**:
+   SpaCy models for required languages will be downloaded dynamically during execution.
 
 ## Usage
-To run the project, ensure that your virtual environment is activated and execute the following command:
 
-```bash
-python main.py
-```
+This branch includes utilities for text processing. Here's how you can use the provided functionality:
 
-### Parameters
-- **input_video**: Path to the input video file.
-- **output_audio**: Path to save the extracted audio file.
-- **input_dict**: A dictionary mapping words to their replacements for processing transcriptions.
-  
-### Example
-The default parameters in `main.py` are set as follows:
+### Sample Code
+
 ```python
-input_video = r"data\inputs\test.mp4"
-output_audio = r"data\outputs\output_audio.wav"
-input_dict = {"nick": ["Dana Farbo","Monica","camila"]} # More the inputs more will be complexity
+from code.text_processing import process_text, apply_replacements_to_transcription, compute_similarity
+
+# Process text to extract nouns and other tokens
+nouns, others = process_text("Hello world, this is an NLP demo.", "English")
+print("Nouns/Pronouns:", nouns)
+print("Other Tokens:", others)
+
+# Apply replacements to a transcription
+replacements = [{'world': ['earth'], 'NLP': ['Natural Language Processing']}]
+result = apply_replacements_to_transcription("Hello world, this is an NLP demo.", replacements)
+print("Replaced Texts:", result)
+
+# Compute similarity between two texts
+similarity_score = compute_similarity("Hello world", "Hi Earth", "English")
+print("Similarity Score:", similarity_score)
 ```
 
-## Code Structure
-The main functionality of the project is implemented in `main.py`. Here's a brief overview of the main components:
+### Example Output
 
-- **AudioExtractor**: A class responsible for extracting audio from video files.
-- **AudioTranscriber**: A class used for transcribing audio files.
-- **F5TTS**: A voice cloner that generates audio based on input text with natural tone.
-- **process_transcription**: A function that processes the transcribed text and applies necessary word transformations.
+```plaintext
+Nouns/Pronouns: ['world', 'NLP']
+Other Tokens: ['demo', 'this', 'an']
+Replaced Texts: ['Hello earth, this is an Natural Language Processing demo.']
+Similarity Score: 0.85
+```
 
-### Main Function Workflow
-The workflow consists of the following steps:
-1. **Extract Audio**: The audio is extracted from the provided video file.
-2. **Transcribe Audio**: The extracted audio is transcribed into text.
-3. **Process Transcription**: The transcribed text is processed to apply replacements based on the `input_dict`.
-4. **Voice Cloning**: The processed transcriptions are cloned into new audio outputs.
+## Code Explanation
+
+### Functions
+
+1. **`load_spacy_model(lang_code)`**  
+   Dynamically downloads and loads the appropriate spaCy model for the specified language.
+2. **`process_text(text, language)`**  
+   Processes text to extract nouns, pronouns, and other tokens based on part-of-speech tagging.
+
+3. **`apply_replacements_to_transcription(text, replacements_list)`**  
+   Applies a sequence of word replacements to a given transcription.
+
+4. **`compute_similarity(text1, text2, language)`**  
+   Computes semantic similarity between two text inputs using spaCy.
+
+### Configuration
+
+The language mappings are defined in `code.options.whisper_languages`, providing support for multiple languages.
+
+### Logging
+
+Detailed logs are displayed during model downloads and replacements for better monitoring.
 
 ## Contributing
-We welcome contributions to enhance the project. If you have suggestions or improvements, feel free to fork the repository and submit a pull request.
+
+We welcome contributions to improve the text processing pipeline. Fork the repository, create a new branch, and submit a pull request with your changes.
 
 ## License
+
 This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
