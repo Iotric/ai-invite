@@ -1,7 +1,9 @@
---extra-index-url https://download.pytorch.org/whl/cu118
-requests
-torch==2.3.0+cu118
-torchaudio==2.3.0+cu118
-transformers
-numpy<2.0
+######################## if Want to use Cuda(GPU) then use below lines ########################
+# --extra-index-url https://download.pytorch.org/whl/cu118
+# torch==2.3.0+cu118
+# torchaudio==2.3.0+cu118
+# numpy<2.0
+
+######################## if Want to use CPU then use below lines ########################
 openai-whisper
+boto3
