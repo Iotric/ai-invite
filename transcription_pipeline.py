@@ -19,7 +19,7 @@ class TranscriptionPipeline:
     def load_model(self):
         try:
             self.model = whisper.load_model(
-                name=self.model_path, device=self.device, in_memory=True
+                name=self.model_path, in_memory=True
             )
             logging.info(f"Whisper model loaded successfully on {self.device}.")
         except Exception as e:
@@ -37,3 +37,9 @@ class TranscriptionPipeline:
         except Exception as e:
             logging.error(f"Error during transcription: {str(e)}")
             raise
+
+# testing
+# if __name__ == "__main__":
+#     pipeline = TranscriptionPipeline()
+#     pipeline.load_model()
+#     print(pipeline.transcribe_audio("test.wav"))

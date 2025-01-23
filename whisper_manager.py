@@ -26,7 +26,7 @@ class WhisperManager:
             logging.error(f"Error downloading Whisper model: {str(e)}")
             raise
 
-
+# main
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Whisper Manager")
     parser.add_argument(
