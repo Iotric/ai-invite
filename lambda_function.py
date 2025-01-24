@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import tempfile
 from urllib.parse import urlparse
 import boto3
 from transcription_pipeline import TranscriptionPipeline
@@ -75,12 +76,19 @@ def lambda_handler(event: dict, context) -> dict:
         parsed_url = urlparse(file_url)
         bucket_name = parsed_url.netloc.split(".")[0]
         object_key = parsed_url.path.lstrip("/")
-        if not bucket_name or not object_key:
-            raise ValueError("Invalid S3 URL provided.")
 
-        # Define local file paths
-        local_audio_path = f"/tmp/{os.path.basename(object_key)}"
-        local_transcription_path = f"/tmp/{os.path.splitext(os.path.basename(object_key))[0]}_transcription.json"
+        # Define local file paths using tempfile
+        with tempfile.NamedTemporaryFile(delete=False) as temp_audio_file:
+            local_audio_path = temp_audio_file.name
+            logger.info(f"Temporary audio file created at {local_audio_path}")
+
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix="_transcription.json"
+        ) as temp_transcription_file:
+            local_transcription_path = temp_transcription_file.name
+            logger.info(
+                f"Temporary transcription file created at {local_transcription_path}"
+            )
 
         # Step 1: Download the audio file from S3
         download_file_from_s3(bucket_name, object_key, local_audio_path)
@@ -125,3 +133,10 @@ def lambda_handler(event: dict, context) -> dict:
     except Exception as e:
         logger.error(f"Error occurred during transcription: {e}")
         return {"statusCode": 500, "body": json.dumps({"error": str(e)})}
+
+# Example test event
+# if __name__ == "__main__":
+#     event = {
+#         "url": "https://{bucket-name}.s3.{region}.amazonaws.com/{object-key}"
+#     }
+#     lambda_handler(event, None)
