@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import tempfile
 from urllib.parse import urlparse
 import boto3
 from video_processor import VideoProcessor
@@ -68,7 +69,8 @@ def lambda_handler(event: dict, context) -> dict:
         object_key = parsed_url.path.lstrip("/")
 
         # Local file paths
-        local_video_path = f"/tmp/{os.path.basename(object_key)}"
+        temp_dir = tempfile.gettempdir()
+        local_video_path = os.path.join(temp_dir, os.path.basename(object_key))
         download_file_from_s3(bucket_name, object_key, local_video_path)
 
         if task == "separate":
@@ -104,11 +106,15 @@ def lambda_handler(event: dict, context) -> dict:
             parsed_audio_url = urlparse(new_audio_url)
             audio_bucket_name = parsed_audio_url.netloc.split(".")[0]
             audio_object_key = parsed_audio_url.path.lstrip("/")
-            local_audio_path = f"/tmp/{os.path.basename(audio_object_key)}"
+            local_audio_path = os.path.join(
+                temp_dir, os.path.basename(audio_object_key)
+            )
             download_file_from_s3(audio_bucket_name, audio_object_key, local_audio_path)
 
             # Replace audio in the video
-            output_video_path = f"/tmp/replaced_{os.path.basename(local_video_path)}"
+            output_video_path = os.path.join(
+                temp_dir, f"replaced_{os.path.basename(local_video_path)}"
+            )
             audio_extractor = VideoProcessor(input_video=local_video_path)
             audio_extractor.replace_audio(
                 new_audio=local_audio_path, output_video=output_video_path
@@ -140,12 +146,12 @@ if __name__ == "__main__":
     # Test the Lambda handler locally
     event1 = {
         "task": "separate",
-        "url": "https://revocalize-files.s3.us-east-1.amazonaws.com/test.mp4",
+        "url": "https://{bucket-name}.s3.{region}.amazonaws.com/{object-key}",
     }
     event2 = {
         "task": "replace",
-        "url": "https://revocalize-files.s3.us-east-1.amazonaws.com/test.mp4",
-        "new_audio": "https://revocalize-files.s3.us-east-1.amazonaws.com/1.mp3",
+        "url": "https://{bucket-name}.s3.{region}.amazonaws.com/{object-key}",
+        "new_audio": "https://{bucket-name}.s3.{region}.amazonaws.com/{object-key}",
     }
     lambda_handler(event1, None)
     lambda_handler(event2, None)

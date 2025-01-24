@@ -1,7 +1,7 @@
 import subprocess
 import os
 import imageio_ffmpeg as ffmpeg
-from moviepy import VideoFileClip, AudioFileClip
+from moviepy import *
 import logging
 import warnings
 
@@ -141,7 +141,7 @@ class VideoProcessor:
             logging.info(f"Replacing audio in video: {self.input_video}")
             video = VideoFileClip(self.input_video)
             audio = AudioFileClip(new_audio)
-            video = video.set_audio(audio)
+            video = video.with_audio(audio)
             video.write_videofile(output_video, codec="libx264", audio_codec="aac")
             logging.info(f"Audio replaced successfully in {output_video}")
         except Exception as e:
