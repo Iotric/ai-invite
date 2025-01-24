@@ -1,5 +1,14 @@
 FROM public.ecr.aws/lambda/python:3.10
 
+# change this as per your requirements
+# but directory in s3 bucket should follow this structure
+
+# {RESULT_OBJECT_KEY}/
+# └── transcription_results/
+
+ENV RESULT_BUCKET_NAME=revocalize-files
+ENV RESULT_OBJECT_KEY=results
+
 # Combine all necessary commands
 RUN yum install -y tar xz wget && \
     mkdir -p /var/task/ffmpeg && \

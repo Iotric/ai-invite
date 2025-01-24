@@ -109,10 +109,11 @@ def lambda_handler(event: dict, context) -> dict:
             json.dump({"transcription": transcription_text}, result_file)
 
         # Step 4: Upload the transcription result back to S3
-        result_bucket_name = os.environ.get(
-            "RESULT_BUCKET_NAME", "transcription-results"
+        result_bucket_name = os.environ.get("RESULT_BUCKET_NAME", "revocalize-files")
+        result_object_key = os.environ.get("RESULT_OBJECT_KEY", "results")
+        result_object_key += (
+            f"/transcription_results/{os.path.basename(local_transcription_path)}"
         )
-        result_object_key = f"results/{os.path.basename(local_transcription_path)}"
         upload_file_to_s3(
             local_transcription_path, result_bucket_name, result_object_key
         )
@@ -133,6 +134,7 @@ def lambda_handler(event: dict, context) -> dict:
     except Exception as e:
         logger.error(f"Error occurred during transcription: {e}")
         return {"statusCode": 500, "body": json.dumps({"error": str(e)})}
+
 
 # Example test event
 # if __name__ == "__main__":
