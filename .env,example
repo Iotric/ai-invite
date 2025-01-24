@@ -1,0 +1,2 @@
+RESULT_BUCKET_NAME="revocalize-files"
+RESULT_OBJECT_KEY="results"

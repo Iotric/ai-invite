@@ -80,9 +80,14 @@ def lambda_handler(event: dict, context) -> dict:
 
             # Upload the extracted audio back to S3
             result_bucket_name = os.environ.get(
-                "RESULT_BUCKET_NAME", "audio-processing-results"
+                "RESULT_BUCKET_NAME", "revocalize-files"
             )
-            result_object_key = f"extracted_audio/{os.path.basename(output_audio_path)}"
+            result_object_key = os.environ.get(
+                "RESULT_OBJECT_KEY", "results"
+            )
+            
+            result_object_key += f"/video_processing_results/extracted_audios/{os.path.basename(output_audio_path)}"
+            
             upload_file_to_s3(output_audio_path, result_bucket_name, result_object_key)
 
             return {
@@ -122,9 +127,12 @@ def lambda_handler(event: dict, context) -> dict:
 
             # Upload the updated video back to S3
             result_bucket_name = os.environ.get(
-                "RESULT_BUCKET_NAME", "audio-processing-results"
+                "RESULT_BUCKET_NAME", "revocalize-files"
             )
-            result_object_key = f"updated_videos/{os.path.basename(output_video_path)}"
+            result_object_key = os.environ.get(
+                "RESULT_OBJECT_KEY", "results"
+            )
+            result_object_key += f"/video_processing_results/updated_videos/{os.path.basename(output_video_path)}"
             upload_file_to_s3(output_video_path, result_bucket_name, result_object_key)
 
             return {
@@ -142,16 +150,16 @@ def lambda_handler(event: dict, context) -> dict:
         return {"statusCode": 500, "body": json.dumps({"error": str(e)})}
 
 
-if __name__ == "__main__":
-    # Test the Lambda handler locally
-    event1 = {
-        "task": "separate",
-        "url": "https://{bucket-name}.s3.{region}.amazonaws.com/{object-key}",
-    }
-    event2 = {
-        "task": "replace",
-        "url": "https://{bucket-name}.s3.{region}.amazonaws.com/{object-key}",
-        "new_audio": "https://{bucket-name}.s3.{region}.amazonaws.com/{object-key}",
-    }
-    lambda_handler(event1, None)
-    lambda_handler(event2, None)
+# if __name__ == "__main__":
+#     # Test the Lambda handler locally
+#     event1 = {
+#         "task": "separate",
+#         "url": "https://{bucket-name}.s3.{region}.amazonaws.com/{object-key}",
+#     }
+#     event2 = {
+#         "task": "replace",
+#         "url": "https://{bucket-name}.s3.{region}.amazonaws.com/{object-key}",
+#         "new_audio": "https://{bucket-name}.s3.{region}.amazonaws.com/{object-key}",
+#     }
+#     lambda_handler(event1, None)
+#     lambda_handler(event2, None)
