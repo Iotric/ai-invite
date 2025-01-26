@@ -83,7 +83,7 @@ def lambda_handler(event: dict, context) -> dict:
             logger.info(f"Temporary audio file created at {local_audio_path}")
 
         with tempfile.NamedTemporaryFile(
-            delete=False, suffix="_transcription.json"
+            delete=False, suffix=".json"
         ) as temp_transcription_file:
             local_transcription_path = temp_transcription_file.name
             logger.info(
@@ -112,7 +112,7 @@ def lambda_handler(event: dict, context) -> dict:
         result_bucket_name = os.environ.get("RESULT_BUCKET_NAME", "revocalize-files")
         result_object_key = os.environ.get("RESULT_OBJECT_KEY", "results")
         result_object_key += (
-            f"/transcription_results/{os.path.basename(local_transcription_path)}"
+            f"/transcription_results/{str(os.path.basename(object_key)).split('.')[0]}_transcription.json"
         )
         upload_file_to_s3(
             local_transcription_path, result_bucket_name, result_object_key
@@ -138,7 +138,7 @@ def lambda_handler(event: dict, context) -> dict:
 
 # Example test event
 # if __name__ == "__main__":
-#     event = {
-#         "url": "https://{bucket-name}.s3.{region}.amazonaws.com/{object-key}"
-#     }
+#     # event = {
+#     #     "url": "https://{bucket-name}.s3.{region}.amazonaws.com/{object-key}"
+#     # }
 #     lambda_handler(event, None)
