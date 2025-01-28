@@ -1,12 +1,12 @@
 --extra-index-url https://download.pytorch.org/whl/cu118
-accelerate>=0.33.0
-bitsandbytes>0.37.0
+accelerate
+bitsandbytes
 cached_path
 datasets
-ema_pytorch>=0.5.2
+ema_pytorch
 jieba
 matplotlib
-numpy<=1.26.4
+numpy<2.0.0
 pydub
 pypinyin
 safetensors
@@ -14,8 +14,8 @@ soundfile
 torch==2.3.0+cu118
 torchaudio==2.3.0+cu118
 torchdiffeq
-tqdm>=4.65.0
+tqdm
 transformers
 vocos
 wandb
-x_transformers>=1.31.14
+x_transformers
