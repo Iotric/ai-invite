@@ -112,7 +112,6 @@ def lambda_handler(event: dict, context) -> dict:
         ref_transcription_bucket_name, ref_transcription_object_key = parse_s3_url(
             ref_transcription_url
         )
-        upload_bucket_name, upload_object_key = parse_s3_url(upload_bucket_url)
 
         # Set up temporary local paths for file processing
         temp_dir = tempfile.gettempdir()
@@ -147,9 +146,12 @@ def lambda_handler(event: dict, context) -> dict:
 
         # Process each generated transcription
         for gen_transcription_url in gen_transcription_list:
+            upload_bucket_name, upload_object_key = parse_s3_url(upload_bucket_url)
+            
             gen_transcription_bucket_name, gen_transcription_object_key = parse_s3_url(
                 gen_transcription_url
             )
+            
             local_gen_transcription_path = os.path.join(
                 temp_dir, os.path.basename(gen_transcription_object_key)
             )
