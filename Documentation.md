@@ -35,37 +35,43 @@ This is the internal Working of this Project(based on Pipelines and Ui Flow)
 
 ## **🎥 2. Video Processing Pipeline** 🛠️📤  
 ### **🔎 Overview**  
-- 🎞️ This pipeline handles video input, ensuring it's optimized and improve it for further processing.
+- 🎞️ This pipeline handles video input, ensuring it's optimized for further processing.
+- This Includes two Processes
   - Video Audio Separation
   - Video Audio Merging
 
 ### **🎯 Purpose & Need**  
-- 🎥 Standardizes video resolution, compression, and format.  
-- 🖼️ Extracts useful frames while reducing noise and redundant data.  
+- 🎥 Separates audio from video and store in .wav format to the S3 bucket.  
+- 🖼️ Merges Final audios with initial video while maintaining the Quality and Storing results.  
 
 ### **📥 Input & Requirements**  
 - 📁 Accepts MP4, AVI, and MOV file formats.  
-- ⚙️ Requires FFmpeg, OpenCV, and optional cloud-based GPU acceleration.  
+- ⚙️ Requires FFmpeg and other requirements as per requirements.txt file
 
 ### **🔄 Process Flow**  
+#### For Video-Audio Separation
 1️⃣ Video is uploaded and added to the processing queue.  
-2️⃣ The format is optimized and compressed.  
-3️⃣ Key frames are extracted and enhanced.  
-4️⃣ Audio is separated for the transcription pipeline.  
-5️⃣ Processed video is stored securely.  
+2️⃣ Audio is separated and stored in the S3 Bucket.  
+3️⃣ Separated Audio is sent to the Trancsription Pipeline.  
+
+#### For Video-Audio Merging
+1️⃣ Audio is Provided by the Cloning Pipeline as a S3 bucket Object Link.  
+2️⃣ Audio is Merged with the initial Video that user Uploaded, generating Multiple Videos and stored in the S3 Bucket.  
+3️⃣ Merged Videos are Avaialable for Downloading in the Ui Interface Fetched from the S3 Bucket.  
 
 ### **🚧 Challenges Solved**  
 - 📦 Large video file handling and optimization.  
 - 🔄 Inconsistent file formats and quality variations.  
-- 🎚️ Noise and unwanted data reduction.  
+- 🎚️ Noise and unwanted data reduction.
+- Merging and Separation is Done Indvidually with Modularity
 
 ### **💾 Output & Storage**  
-- 📦 Processed videos stored in an S3 bucket for scalability.  
-- 🎵 Extracted audio forwarded to the transcription pipeline.  
+- 📦 Processed videos and Audios stored in an S3 bucket for scalability.  
+- 🎵 Extracted audio forwarded to the transcription pipeline.
+- 🎥 Final Merged Videos forwarded for Downloading in UI
 
-### **📈 Scalability & Future Enhancements**  
-- 🏗️ Implement cloud-based GPU acceleration for faster processing.  
-- 🎯 AI-based enhancement for better quality improvement.  
+### **📈 Resources and GPU Requirements**  
+- 🏗️ Implentation using Lambda is Enough for faster processing.  
 
 ---
 
@@ -75,7 +81,7 @@ This is the internal Working of this Project(based on Pipelines and Ui Flow)
 
 ### **🎯 Purpose & Need**  
 - 🧠 Enables text-based indexing and analysis.  
-- 🔍 Ensures accessibility and content searchability.  
+- 🔍 Transcriptions are stored in the S3 Bucket for using in further processes.  
 
 ### **📥 Input & Requirements**  
 - 🎵 Accepts WAV, MP3, and FLAC formats.  
